@@ -4,14 +4,20 @@ import * as Scenes from '~/game/scenes'
 
 const orderedScenes = Object.values(Scenes).sort((a, b) => ((a as any).isStart ? -1 : (b as any).isStart ? 1 : 0))
 
-export default function init(canvas: HTMLCanvasElement) {
+export default function init() {
   const config: Phaser.Types.Core.GameConfig = {
-    canvas,
-    type: Phaser.CANVAS,
+    type: Phaser.WEBGL,
     width: document.body.clientWidth,
     height: document.body.clientHeight,
     scene: orderedScenes,
     banner: false,
+    pixelArt: true,
+    physics: {
+      default: 'arcade',
+      arcade: {
+        gravity: { y: 0 },
+      },
+    },
   }
   log('initialising game')
   const game = new Phaser.Game(config)

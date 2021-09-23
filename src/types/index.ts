@@ -9,4 +9,6 @@ export interface Scene {
 export enum SceneKey {
   Intro = 'Intro',
   Game = 'Game',
+  Hud = 'Hud',
+  Settings = 'Settings',
 }
