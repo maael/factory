@@ -27,7 +27,7 @@ export default class Player {
 
   create = () => {
     this.sprite = this.scene.physics.add.sprite(50, 100, 'player', 1)
-    this.light = this.scene.lights.addLight(this.sprite.x, this.sprite.y, 300).setScrollFactor(1)
+    this.light = this.scene.lights.addLight(this.sprite.x, this.sprite.y, 300, 0xffffff, 0.5).setScrollFactor(1)
     this.scene.anims.create({
       key: 'right',
       frames: this.scene.anims.generateFrameNumbers('player', { start: 1, end: 2 }),
