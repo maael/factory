@@ -2,6 +2,7 @@ import * as Phaser from 'phaser'
 import { log } from '~/game/util/log'
 import { Scene, SceneKey } from '~/types'
 import Player from '~/game/entities/player'
+import { perlin } from '../util/rnd'
 
 let map: Phaser.Tilemaps.Tilemap
 let player: Player
@@ -37,18 +38,42 @@ enum Tiles {
   Trees = 3,
 }
 
+function generateMap(width: number, height: number) {
+  const mapArr = Array.from({ length: height }, (_, y) => Array.from({ length: width }, (_, x) => perlin(x, y)))
+  for (let y = 0; y < mapArr.length; y++) {
+    for (let x = 0; x < mapArr[y].length; x++) {
+      const val = mapArr[y][x]
+      console.info(y, x, val)
+      if (val < -0.6) {
+        mapArr[y][x] = Tiles.Water
+      } else {
+        mapArr[y][x] = Tiles.Grass
+      }
+    }
+  }
+  return mapArr
+}
+
+const worldSize = { width: 100, height: 100 }
+
 function gameCreate(this: Phaser.Scene) {
   this.cameras.roundPixels = true
   this.cameras.main.zoomTo(2, 0)
   this.scene.run(SceneKey.Hud)
   this.scene.bringToTop(SceneKey.Hud)
-  map = this.make.tilemap({ key: 'generated', tileWidth: 16, tileHeight: 16, width: 500, height: 500 })
+  map = this.make.tilemap({
+    key: 'generated',
+    tileWidth: 16,
+    tileHeight: 16,
+    width: worldSize.width,
+    height: worldSize.height,
+  })
   const tileset = map.addTilesetImage('basic-tiles', 'basic-tiles', 16, 16, 1, 2)
   const groundLayer = map.createBlankLayer('ground', tileset)
   const groundEmbellishmentLayer = map.createBlankLayer('ground-embellishments', tileset)
   map.setLayer(groundLayer)
-  groundLayer.fill(Tiles.Grass)
-  groundLayer.fill(Tiles.Water, 10, 10, 10, 10)
+  const mapTiles = generateMap(worldSize.width, worldSize.height)
+  groundLayer.putTilesAt(mapTiles, 0, 0)
   groundEmbellishmentLayer.fill(Tiles.Trees, 25, 5, 10, 10)
   groundLayer.setPipeline('Light2D')
   groundEmbellishmentLayer.setPipeline('Light2D')
