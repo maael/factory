@@ -8,6 +8,23 @@ import { generateMap } from '~/game/util/mapGen'
 let map: Phaser.Tilemaps.Tilemap
 let player: Player
 let marker: Phaser.GameObjects.Container
+
+const dragInfo: {
+  start: { x: number; y: number }
+  startTile: { x: number; y: number }
+  isDragging: boolean
+  current: { x: number; y: number }
+  currentTile: { x: number; y: number }
+  dragMarker?: Phaser.GameObjects.Rectangle
+} = {
+  start: { x: 0, y: 0 },
+  startTile: { x: 0, y: 0 },
+  isDragging: false,
+  current: { x: 0, y: 0 },
+  currentTile: { x: 0, y: 0 },
+  dragMarker: undefined,
+}
+
 export class GameScene extends Phaser.Scene implements Scene {
   constructor(config: Phaser.Types.Scenes.SettingsConfig) {
     super({ ...config, key: SceneKey.Game })
@@ -102,12 +119,57 @@ function gameCreate(this: Phaser.Scene) {
     repeat: Infinity,
     scale: 1.2,
   })
+
+  dragInfo.dragMarker = this.add
+    .rectangle(16, 16, 16, 16)
+    .setFillStyle(0x00ff00, 0.2)
+    .setStrokeStyle(1, 0x00ff00, 0.8)
+    .setScrollFactor(1)
 }
 
 let inspectButtonBeenDown = false
 
 function gameUpdate(this: Phaser.Scene, time: number, delta: number) {
   player.update(time, delta)
+
+  if (this.input.activePointer.leftButtonDown()) {
+    const worldPoint = this.input.activePointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
+    const pointerTileX = map.worldToTileX(worldPoint.x)
+    const pointerTileY = map.worldToTileY(worldPoint.y)
+    const newMarkerX = map.tileToWorldX(pointerTileX)
+    const newMarkerY = map.tileToWorldY(pointerTileY)
+    if (!dragInfo.isDragging) {
+      dragInfo.start.x = newMarkerX + 8
+      dragInfo.start.y = newMarkerY + 24
+      dragInfo.startTile.x = pointerTileX
+      dragInfo.startTile.y = pointerTileY
+    }
+    dragInfo.current.x = newMarkerX + 8
+    dragInfo.current.y = newMarkerY + 24
+    dragInfo.currentTile.x = pointerTileX
+    dragInfo.currentTile.y = pointerTileY
+    dragInfo.isDragging = true
+    dragInfo.dragMarker
+      ?.setSize(dragInfo.current.x - dragInfo.start.x, dragInfo.current.y - dragInfo.start.y)
+      .setPosition(dragInfo.start.x, dragInfo.start.y)
+  } else if (this.input.activePointer.leftButtonReleased()) {
+    if (dragInfo.isDragging) {
+      const startX = Math.min(dragInfo.startTile.x, dragInfo.currentTile.x)
+      const startY = Math.min(dragInfo.startTile.y, dragInfo.currentTile.y)
+      map.fill(
+        2,
+        startX,
+        startY + 1,
+        Math.abs(dragInfo.currentTile.x - dragInfo.startTile.x),
+        Math.abs(dragInfo.currentTile.y - dragInfo.startTile.y),
+        undefined,
+        'ground-embellishments'
+      )
+    }
+    dragInfo.isDragging = false
+  }
+
+  dragInfo.dragMarker?.setVisible(dragInfo.isDragging)
 
   if (this.input.activePointer.rightButtonDown()) {
     const worldPoint = this.input.activePointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
