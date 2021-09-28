@@ -33,12 +33,15 @@ function gameCreate(this: Phaser.Scene) {
 
   this.add.text(this.cameras.main.width - 250, 20, 'Journal', { fontSize: '16px', color: '#FFFFFF' })
 
-  tileInfoText = this.add.text(this.cameras.main.width - 250, this.cameras.main.height - 250, 'Build', {
+  tileInfoText = this.add.text(this.cameras.main.width - 250, this.cameras.main.height - 300, 'Build', {
     fontSize: '16px',
     color: '#FFFFFF',
   })
 
-  this.add.text(20, this.cameras.main.height - 250, 'Actions', { fontSize: '16px', color: '#FFFFFF' })
+  this.add.text(this.cameras.main.width - 250, this.cameras.main.height - 250, 'Actions', {
+    fontSize: '16px',
+    color: '#FFFFFF',
+  })
 }
 
 function gameUpdate(this: Phaser.Scene, _time: number, _delta: number) {

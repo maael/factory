@@ -12,3 +12,13 @@ export enum SceneKey {
   Hud = 'Hud',
   Settings = 'Settings',
 }
+
+export enum Tiles {
+  Grass = 0,
+  Water = 1,
+  GoldOre = 2,
+  Trees = 3,
+  Dirt = 4,
+  Sand = 5,
+  SilverOre = 6,
+}

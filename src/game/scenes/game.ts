@@ -1,12 +1,13 @@
 import * as Phaser from 'phaser'
 import { log } from '~/game/util/log'
-import { Scene, SceneKey } from '~/types'
+import { Scene, SceneKey, Tiles } from '~/types'
 import Player from '~/game/entities/player'
-import { perlin } from '../util/rnd'
+import { tileNameMap } from '~/game/util/mappers'
+import { generateMap } from '~/game/util/mapGen'
 
 let map: Phaser.Tilemaps.Tilemap
 let player: Player
-let marker: Phaser.GameObjects.Graphics
+let marker: Phaser.GameObjects.Container
 export class GameScene extends Phaser.Scene implements Scene {
   constructor(config: Phaser.Types.Scenes.SettingsConfig) {
     super({ ...config, key: SceneKey.Game })
@@ -21,7 +22,13 @@ export class GameScene extends Phaser.Scene implements Scene {
 
 function gameInit(this: Phaser.Scene) {
   log('from init')
-  player = new Player(this, { ...this.input.keyboard.createCursorKeys(), sprint: this.input.keyboard.addKey('shift') })
+  player = new Player(this, {
+    left: this.input.keyboard.addKey('a'),
+    right: this.input.keyboard.addKey('d'),
+    up: this.input.keyboard.addKey('w'),
+    down: this.input.keyboard.addKey('s'),
+    sprint: this.input.keyboard.addKey('shift'),
+  })
   player.init()
 }
 
@@ -32,31 +39,10 @@ function gamePreload(this: Phaser.Scene) {
   player.preload()
 }
 
-enum Tiles {
-  Grass = 0,
-  Water = 1,
-  Trees = 3,
-}
-
-function generateMap(width: number, height: number) {
-  const mapArr = Array.from({ length: height }, (_, y) => Array.from({ length: width }, (_, x) => perlin(x, y)))
-  for (let y = 0; y < mapArr.length; y++) {
-    for (let x = 0; x < mapArr[y].length; x++) {
-      const val = mapArr[y][x]
-      console.info(y, x, val)
-      if (val < -0.6) {
-        mapArr[y][x] = Tiles.Water
-      } else {
-        mapArr[y][x] = Tiles.Grass
-      }
-    }
-  }
-  return mapArr
-}
-
 const worldSize = { width: 100, height: 100 }
 
 function gameCreate(this: Phaser.Scene) {
+  this.input.mouse.disableContextMenu()
   this.cameras.roundPixels = true
   this.cameras.main.zoomTo(2, 0)
   this.scene.run(SceneKey.Hud)
@@ -71,18 +57,20 @@ function gameCreate(this: Phaser.Scene) {
   const tileset = map.addTilesetImage('basic-tiles', 'basic-tiles', 16, 16, 1, 2)
   const groundLayer = map.createBlankLayer('ground', tileset)
   const groundEmbellishmentLayer = map.createBlankLayer('ground-embellishments', tileset)
-  map.setLayer(groundLayer)
   const mapTiles = generateMap(worldSize.width, worldSize.height)
-  groundLayer.putTilesAt(mapTiles, 0, 0)
-  groundEmbellishmentLayer.fill(Tiles.Trees, 25, 5, 10, 10)
+  groundLayer.setData('height', 0)
+  groundLayer.putTilesAt(mapTiles.ground, 0, 0)
+  groundEmbellishmentLayer.setData('height', 1)
+  groundEmbellishmentLayer.putTilesAt(mapTiles.embellished, 0, 0)
   groundLayer.setPipeline('Light2D')
   groundEmbellishmentLayer.setPipeline('Light2D')
+  map.setLayer(groundLayer)
   player.create()
 
   this.lights.enable().setAmbientColor(0x999999)
 
-  map.setCollision([Tiles.Water], undefined, undefined, groundLayer)
-  map.setCollision([Tiles.Trees], undefined, undefined, groundEmbellishmentLayer)
+  map.setCollision([Tiles.Water], true, true, groundLayer)
+  map.setCollision([Tiles.Trees], true, true, groundEmbellishmentLayer)
   this.matter.world.convertTilemapLayer(groundLayer)
   this.matter.world.convertTilemapLayer(groundEmbellishmentLayer)
   this.matter.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
@@ -90,26 +78,46 @@ function gameCreate(this: Phaser.Scene) {
   this.cameras.main.startFollow(player.sprite)
 
   marker = this.add
-    .graphics()
-    .lineStyle(1, 0x000000, 0.5)
-    .strokeRect(0, 0, map.tileWidth * groundLayer.scaleX, map.tileHeight * groundLayer.scaleY)
+    .container()
+    .add(
+      this.add
+        .graphics()
+        .lineStyle(1, 0x000000, 0.7)
+        .strokeCircle(0, 0, map.tileWidth / 2)
+    )
     .setVisible(false)
+    .add(
+      this.add
+        .graphics()
+        .lineStyle(1, 0x000000, 0.5)
+        .strokeCircle(0, 0, map.tileWidth / 2 + 2)
+    )
+    .setVisible(false)
+
+  this.tweens.add({
+    targets: marker,
+    duration: 2000,
+    ease: 'linear',
+    yoyo: true,
+    repeat: Infinity,
+    scale: 1.2,
+  })
 }
 
-let leftButtonBeenDown = false
+let inspectButtonBeenDown = false
 
 function gameUpdate(this: Phaser.Scene, time: number, delta: number) {
   player.update(time, delta)
 
-  if (this.input.activePointer.leftButtonDown()) {
+  if (this.input.activePointer.rightButtonDown()) {
     const worldPoint = this.input.activePointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2
     const pointerTileX = map.worldToTileX(worldPoint.x)
     const pointerTileY = map.worldToTileY(worldPoint.y)
 
-    const newMarkerX = map.tileToWorldX(pointerTileX)
-    const newMarkerY = map.tileToWorldY(pointerTileY)
+    const newMarkerX = map.tileToWorldX(pointerTileX) + 16 / 2
+    const newMarkerY = map.tileToWorldY(pointerTileY) + 16 / 2
 
-    if (newMarkerY !== marker.y || newMarkerX !== marker.x || (!marker.visible && !leftButtonBeenDown)) {
+    if (newMarkerY !== marker.y || newMarkerX !== marker.x || (!marker.visible && !inspectButtonBeenDown)) {
       marker.setVisible(true)
       marker.x = newMarkerX
       marker.y = newMarkerY
@@ -117,21 +125,31 @@ function gameUpdate(this: Phaser.Scene, time: number, delta: number) {
       let hoveredTile: Phaser.Tilemaps.Tile | null = null
       map.layers.forEach((layer) => {
         const tile = map.getTileAt(pointerTileX, pointerTileY, undefined, layer.name)
-        if (tile && (!hoveredTile || (hoveredTile && hoveredTile.index < tile.index))) {
+        if (
+          tile &&
+          tile.index !== undefined &&
+          (!hoveredTile ||
+            tile.layer.tilemapLayer.data.get('height') > hoveredTile.layer.tilemapLayer.data.get('height'))
+        ) {
           hoveredTile = tile
         }
       })
 
       if (hoveredTile) {
         const tile: Phaser.Tilemaps.Tile = hoveredTile
-        this.scene.manager.game.events.emit('show-tile-info', { name: Tiles[tile.index], pointerTileX, pointerTileY })
+        this.scene.manager.game.events.emit('show-tile-info', {
+          tileIndex: tile.index,
+          name: tileNameMap[tile.index],
+          pointerTileX,
+          pointerTileY,
+        })
       }
-    } else if (marker.visible && !leftButtonBeenDown) {
+    } else if (marker.visible && !inspectButtonBeenDown) {
       marker.setVisible(false)
       this.scene.manager.game.events.emit('show-tile-info', undefined)
     }
-    leftButtonBeenDown = true
-  } else if (leftButtonBeenDown && this.input.activePointer.leftButtonReleased()) {
-    leftButtonBeenDown = false
+    inspectButtonBeenDown = true
+  } else if (inspectButtonBeenDown && this.input.activePointer.rightButtonReleased()) {
+    inspectButtonBeenDown = false
   }
 }
