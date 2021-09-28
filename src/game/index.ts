@@ -13,9 +13,11 @@ export default function init() {
     banner: false,
     pixelArt: true,
     physics: {
-      default: 'arcade',
-      arcade: {
+      default: 'matter',
+      matter: {
         gravity: { y: 0 },
+        debug: process.env.NEXT_PUBLIC_DEBUG == 'true',
+        enableSleeping: false,
       },
     },
   }
@@ -23,6 +25,6 @@ export default function init() {
   const game = new Phaser.Game(config)
   return function destroy() {
     log('destroying game')
-    game.destroy(false)
+    game.destroy(true)
   }
 }

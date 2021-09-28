@@ -38,7 +38,7 @@ function introCreate(this: FullScene) {
 }
 
 function introUpdate(this: FullScene) {
-  if (this.SKIP_KEY?.isDown) {
+  if (process.env.NEXT_PUBLIC_SKIP_INTRO || this.SKIP_KEY?.isDown) {
     this.scene.switch(SceneKey.Game)
   }
 }

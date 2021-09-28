@@ -2,6 +2,8 @@ import * as Phaser from 'phaser'
 import { log } from '~/game/util/log'
 import { Scene, SceneKey } from '~/types'
 
+let tileInfoText: Phaser.GameObjects.Text
+
 export class HudScene extends Phaser.Scene implements Scene {
   constructor(config: Phaser.Types.Scenes.SettingsConfig) {
     super({ ...config, key: SceneKey.Hud })
@@ -16,6 +18,9 @@ export class HudScene extends Phaser.Scene implements Scene {
 
 function gameInit(this: Phaser.Scene) {
   log('from init')
+  this.scene.manager.game.events.on('show-tile-info', (data) => {
+    this.data.set('tile-info', data)
+  })
 }
 
 function gamePreload(this: Phaser.Scene) {
@@ -28,7 +33,7 @@ function gameCreate(this: Phaser.Scene) {
 
   this.add.text(this.cameras.main.width - 250, 20, 'Journal', { fontSize: '16px', color: '#FFFFFF' })
 
-  this.add.text(this.cameras.main.width - 250, this.cameras.main.height - 250, 'Build', {
+  tileInfoText = this.add.text(this.cameras.main.width - 250, this.cameras.main.height - 250, 'Build', {
     fontSize: '16px',
     color: '#FFFFFF',
   })
@@ -38,4 +43,10 @@ function gameCreate(this: Phaser.Scene) {
 
 function gameUpdate(this: Phaser.Scene, _time: number, _delta: number) {
   /*Do nothing*/
+  const tileInfo = this.data.get('tile-info')
+  if (tileInfo) {
+    tileInfoText.setText(tileInfo.name)
+  } else {
+    tileInfoText.setText('Build')
+  }
 }

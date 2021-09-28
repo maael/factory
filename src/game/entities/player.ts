@@ -5,13 +5,19 @@ interface Controls {
   down: Phaser.Input.Keyboard.Key
   left: Phaser.Input.Keyboard.Key
   right: Phaser.Input.Keyboard.Key
+  sprint: Phaser.Input.Keyboard.Key
 }
 
 export default class Player {
   scene: Phaser.Scene
-  sprite: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody
+  sprite: Phaser.Physics.Matter.Sprite
   light: Phaser.GameObjects.Light
   controls: Controls
+  speed = {
+    base: 3,
+    multiplier: 1,
+    sprintMultiplier: 1,
+  }
   constructor(scene: Phaser.Scene, controls: Controls) {
     this.scene = scene
     this.controls = controls
@@ -26,7 +32,7 @@ export default class Player {
   }
 
   create = () => {
-    this.sprite = this.scene.physics.add.sprite(50, 100, 'player', 1)
+    this.sprite = this.scene.matter.add.sprite(50, 100, 'player', 1, { friction: 0 }).setPipeline('Light2D')
     this.light = this.scene.lights.addLight(this.sprite.x, this.sprite.y, 300, 0xffffff, 0.5).setScrollFactor(1)
     this.scene.anims.create({
       key: 'right',
@@ -55,22 +61,25 @@ export default class Player {
   }
 
   update = (_time: number, _delta: number) => {
-    this.sprite.body.setVelocity(0)
+    this.sprite.setVelocity(0)
+    this.sprite.setAngularVelocity(0)
     let animationDirection
+    this.speed.sprintMultiplier = this.controls.sprint.isDown ? 2 : 1
+    const speed = this.speed.base * this.speed.multiplier * this.speed.sprintMultiplier
     if (this.controls.up.isDown) {
-      this.sprite.body.setVelocityY(-100)
+      this.sprite.setVelocityY(-speed)
       animationDirection = 'up'
     }
     if (this.controls.down.isDown) {
-      this.sprite.body.setVelocityY(100)
+      this.sprite.setVelocityY(speed)
       animationDirection = 'down'
     }
     if (this.controls.left.isDown) {
-      this.sprite.body.setVelocityX(-100)
+      this.sprite.setVelocityX(-speed)
       animationDirection = 'left'
     }
     if (this.controls.right.isDown) {
-      this.sprite.body.setVelocityX(100)
+      this.sprite.setVelocityX(speed)
       animationDirection = 'right'
     }
     if (animationDirection) {
